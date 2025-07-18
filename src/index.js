@@ -2,7 +2,6 @@ import { Picker } from 'emoji-mart';
 import data from '@emoji-mart/data';
 import { createPopper } from '@popperjs/core';
 import './style.css';
-import { isAdmin, getCurrentUserHandle } from './user.js';
 
 const textarea = document.getElementById('send_textarea');
 
@@ -12,17 +11,6 @@ if (!(textarea instanceof HTMLTextAreaElement)) {
 
 const CUSTOM_EMOJI_CATEGORY = 'custom';
 const CUSTOM_EMOJI_STORAGE_KEY = 'custom_emojis';
-const ALLOWED_USERS = ['admin','default-user']; // Add more users as needed
-
-/**
- * Check if current user has permission to manage custom emojis
- * @returns {boolean}
- */
-function hasCustomEmojiPermission() {
-        const userHandle = getCurrentUserHandle();
-        return ALLOWED_USERS.includes(userHandle);
-}
-
 
 /**
  * Load custom emojis from storage
