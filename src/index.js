@@ -234,9 +234,6 @@ async function getLocaleData() {
  * Create custom emoji management UI
  */
 function createCustomEmojiManager() {
-    if (!hasCustomEmojiPermission()) {
-        return null;
-    }
 
     const manager = document.createElement('div');
     manager.id = 'customEmojiManager';
@@ -402,8 +399,6 @@ addEmojiButton.title = 'Insert emoji';
 addEmojiButton.classList.add('fa-solid', 'fa-icons', 'interactable');
 addEmojiButton.tabIndex = 0;
 
-// Add custom emoji manager button if user has permission
-if (hasCustomEmojiPermission()) {
     const manageButton = document.createElement('div');
     manageButton.id = 'manageCustomEmojis';
     manageButton.title = 'Manage custom emojis';
@@ -420,7 +415,6 @@ if (hasCustomEmojiPermission()) {
     });
     
     buttonContainer.insertAdjacentElement('afterbegin', manageButton);
-}
 
 const popper = createPopper(addEmojiButton, picker, {
     placement: 'top-end',
@@ -469,5 +463,4 @@ window.EmojiPickerExtension = {
     addCustomEmoji,
     removeCustomEmoji,
     loadCustomEmojis,
-    hasCustomEmojiPermission
 };
