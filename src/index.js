@@ -46,10 +46,6 @@ function saveCustomEmojis(emojis) {
  * @param {Array} keywords - Search keywords
  */
 function addCustomEmoji(id, name, url, keywords = []) {
-    if (!hasCustomEmojiPermission()) {
-        console.warn('User does not have permission to add custom emojis');
-        return false;
-    }
 
     const customEmojis = loadCustomEmojis();
     const newEmoji = {
