@@ -73,10 +73,6 @@ function addCustomEmoji(id, name, url, keywords = []) {
  * @param {string} id
  */
 function removeCustomEmoji(id) {
-    if (!hasCustomEmojiPermission()) {
-        console.warn('User does not have permission to remove custom emojis');
-        return false;
-    }
 
     const customEmojis = loadCustomEmojis();
     const filteredEmojis = customEmojis.filter(emoji => emoji.id !== id);
