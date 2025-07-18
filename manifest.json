@@ -5,8 +5,9 @@
     "optional": [],
     "js": "dist/index.js",
     "css": "",
-    "author": "Cohee1207",
+    "author": "ameowra",
     "version": "1.0.0",
-    "homePage": "https://github.com/SillyTavern/Extension-EmojiPicker",
-    "auto_update": true
+    "homePage": "https://github.com/Red-dish/SillyTavern-CustomEmojiPicker",
+    "auto_update": true,
+    "description": "Forked from Extension-EmojiPicker by Cohee1207."
 }
