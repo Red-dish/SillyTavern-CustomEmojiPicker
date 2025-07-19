@@ -9,6 +9,7 @@ if (!(textarea instanceof HTMLTextAreaElement)) {
     throw new Error('Element with id "send_textarea" is not a textarea.');
 }
 
+// Configuration
 const CUSTOM_EMOJI_CATEGORY = 'custom';
 const CUSTOM_EMOJI_STORAGE_KEY = 'custom_emojis';
 
@@ -22,6 +23,7 @@ function loadCustomEmojis() {
         return stored ? JSON.parse(stored) : [];
     } catch (error) {
         console.error('Error loading custom emojis:', error);
+        alert('Failed to load custom emojis. Please try again.');
         return [];
     }
 }
@@ -35,6 +37,132 @@ function saveCustomEmojis(emojis) {
         localStorage.setItem(CUSTOM_EMOJI_STORAGE_KEY, JSON.stringify(emojis));
     } catch (error) {
         console.error('Error saving custom emojis:', error);
+        alert('Failed to save custom emojis. Check browser storage settings.');
+    }
+}
+
+/**
+ * Convert file to base64 data URL
+ * @param {File} file
+ * @returns {Promise<string>}
+ */
+function fileToDataURL(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+/**
+ * Export custom emojis to JSON file
+ */
+function exportCustomEmojis() {
+    const customEmojis = loadCustomEmojis();
+    if (customEmojis.length === 0) {
+        alert('No custom emojis to export.');
+        return;
+    }
+    const dataStr = JSON.stringify(customEmojis, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `custom_emojis_${new Date().toISOString().split('T')[0]}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+}
+
+/**
+ * Import custom emojis from JSON file
+ * @param {File} file
+ */
+async function importCustomEmojis(file) {
+    try {
+        const text = await file.text();
+        const importedEmojis = JSON.parse(text);
+        
+        if (!Array.isArray(importedEmojis)) {
+            throw new Error('Invalid file format: expected array of emojis');
+        }
+
+        // Validate each emoji
+        for (const emoji of importedEmojis) {
+            if (!emoji.id || !emoji.name || !emoji.src) {
+                throw new Error('Invalid emoji format: missing required fields (id, name, src)');
+            }
+        }
+
+        // Merge with existing emojis (imported ones take precedence)
+        const existingEmojis = loadCustomEmojis();
+        const mergedEmojis = [...existingEmojis];
+        
+        let importCount = 0;
+        for (const importedEmoji of importedEmojis) {
+            const existingIndex = mergedEmojis.findIndex(e => e.id === importedEmoji.id);
+            if (existingIndex !== -1) {
+                mergedEmojis[existingIndex] = importedEmoji;
+            } else {
+                mergedEmojis.push(importedEmoji);
+                importCount++;
+            }
+        }
+
+        saveCustomEmojis(mergedEmojis);
+        refreshEmojiPicker();
+        updateCustomEmojiList();
+        
+        alert(`Successfully imported ${importCount} new emojis and updated ${importedEmojis.length - importCount} existing emojis`);
+        return true;
+    } catch (error) {
+        console.error('Error importing emojis:', error);
+        alert(`Error importing emojis: ${error.message}`);
+        return false;
+    }
+}
+
+/**
+ * Validate image file
+ * @param {File} file
+ * @returns {boolean}
+ */
+function validateImageFile(file) {
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+    
+    if (file.size > maxSize) {
+        alert('File size must be less than 2MB');
+        return false;
+    }
+    
+    if (!allowedTypes.includes(file.type)) {
+        alert('Only PNG, JPEG, GIF, and WebP images are allowed');
+        return false;
+    }
+    
+    return true;
+}
+
+/**
+ * Validate image URL
+ * @param {string} url
+ * @returns {Promise<boolean>}
+ */
+async function validateImageUrl(url) {
+    if (!url.match(/^https?:\/\/[^\s$.?#].[^\s]*$/)) {
+        alert('Please enter a valid HTTP/HTTPS URL');
+        return false;
+    }
+    try {
+        const response = await fetch(url, { method: 'HEAD' });
+        const contentType = response.headers.get('Content-Type');
+        return response.ok && contentType.startsWith('image/');
+    } catch (error) {
+        console.error('Error validating image URL:', error);
+        alert('Invalid or unreachable image URL');
+        return false;
     }
 }
 
@@ -42,12 +170,18 @@ function saveCustomEmojis(emojis) {
  * Add a custom emoji
  * @param {string} id - Unique identifier for the emoji
  * @param {string} name - Display name
- * @param {string} url - URL to the emoji image
+ * @param {string} url - URL to the emoji image (can be data URL or regular URL)
  * @param {Array} keywords - Search keywords
  */
 function addCustomEmoji(id, name, url, keywords = []) {
-
     const customEmojis = loadCustomEmojis();
+    
+    // Check for duplicate name
+    if (customEmojis.some(emoji => emoji.name === name && emoji.id !== id)) {
+        alert('An emoji with this name already exists. Please choose a different name.');
+        return false;
+    }
+
     const newEmoji = {
         id,
         name,
@@ -64,8 +198,14 @@ function addCustomEmoji(id, name, url, keywords = []) {
         customEmojis.push(newEmoji);
     }
 
-    saveCustomEmojis(customEmojis);
-    return true;
+    try {
+        saveCustomEmojis(customEmojis);
+        return true;
+    } catch (error) {
+        console.error('Error adding emoji:', error);
+        alert('Failed to add emoji due to storage error.');
+        return false;
+    }
 }
 
 /**
@@ -73,11 +213,17 @@ function addCustomEmoji(id, name, url, keywords = []) {
  * @param {string} id
  */
 function removeCustomEmoji(id) {
-
     const customEmojis = loadCustomEmojis();
     const filteredEmojis = customEmojis.filter(emoji => emoji.id !== id);
-    saveCustomEmojis(filteredEmojis);
-    return true;
+    
+    try {
+        saveCustomEmojis(filteredEmojis);
+        return true;
+    } catch (error) {
+        console.error('Error removing emoji:', error);
+        alert('Failed to remove emoji due to storage error.');
+        return false;
+    }
 }
 
 /**
@@ -165,8 +311,7 @@ function insertEmoji(inputEmoji) {
  */
 function getLanguageCode() {
     const language = localStorage.getItem('language');
-    const languageCode = language ? String(language.split('-')[0]).trim().toLowerCase() : 'en';
-    return languageCode;
+    return language ? String(language.split('-')[0]).trim().toLowerCase() : 'en';
 }
 
 /**
@@ -230,7 +375,6 @@ async function getLocaleData() {
  * Create custom emoji management UI
  */
 function createCustomEmojiManager() {
-
     const manager = document.createElement('div');
     manager.id = 'customEmojiManager';
     manager.style.cssText = `
@@ -251,22 +395,49 @@ function createCustomEmojiManager() {
     `;
 
     manager.innerHTML = `
-        <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h3 style="margin: 0; color: var(--SmartThemeQuoteColor, #fff);">Custom Emoji Manager</h3>
-            <button id="closeManager" style="background: none; border: none; color: var(--SmartThemeQuoteColor, #fff); cursor: pointer; font-size: 18px;">&times;</button>
+            <button id="closeManager" style="background: none; border: none; color: var(--SmartThemeQuoteColor, #fff); cursor: pointer; font-size: 18px;">×</button>
         </div>
         
         <div style="margin-bottom: 20px;">
             <h4 style="color: var(--SmartThemeQuoteColor, #fff);">Add New Emoji</h4>
             <input type="text" id="emojiId" placeholder="Emoji ID (e.g., my_emoji)" style="width: 100%; margin-bottom: 10px; padding: 8px; border: 1px solid var(--SmartThemeBorderColor, #444); background: var(--SmartThemeBlurTintColor, #333); color: var(--SmartThemeQuoteColor, #fff); border-radius: 4px;">
             <input type="text" id="emojiName" placeholder="Display Name" style="width: 100%; margin-bottom: 10px; padding: 8px; border: 1px solid var(--SmartThemeBorderColor, #444); background: var(--SmartThemeBlurTintColor, #333); color: var(--SmartThemeQuoteColor, #fff); border-radius: 4px;">
-            <input type="url" id="emojiUrl" placeholder="Image URL" style="width: 100%; margin-bottom: 10px; padding: 8px; border: 1px solid var(--SmartThemeBorderColor, #444); background: var(--SmartThemeBlurTintColor, #333); color: var(--SmartThemeQuoteColor, #fff); border-radius: 4px;">
+            
+            <div style="margin-bottom: 10px;">
+                <label style="color: var(--SmartThemeQuoteColor, #fff); margin-bottom: 5px; display: block;">Image Source:</label>
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <label style="color: var(--SmartThemeQuoteColor, #fff); cursor: pointer;">
+                        <input type="radio" name="imageSource" value="upload" checked style="margin-right: 5px;"> Upload File
+                    </label>
+                    <label style="color: var(--SmartThemeQuoteColor, #fff); cursor: pointer;">
+                        <input type="radio" name="imageSource" value="url" style="margin-right: 5px;"> Image URL
+                    </label>
+                </div>
+                
+                <div id="uploadSection">
+                    <input type="file" id="emojiFile" accept="image/*" style="width: 100%; padding: 8px; border: 1px solid var(--SmartThemeBorderColor, #444); background: var(--SmartThemeBlurTintColor, #333); color: var(--SmartThemeQuoteColor, #fff); border-radius: 4px; margin-bottom: 10px;">
+                    <div id="imagePreview" style="margin-bottom: 10px; text-align: center;"></div>
+                </div>
+                
+                <div id="urlSection" style="display: none;">
+                    <input type="url" id="emojiUrl" placeholder="Image URL" style="width: 100%; padding: 8px; border: 1px solid var(--SmartThemeBorderColor, #444); background: var(--SmartThemeBlurTintColor, #333); color: var(--SmartThemeQuoteColor, #fff); border-radius: 4px;">
+                </div>
+            </div>
+            
             <input type="text" id="emojiKeywords" placeholder="Keywords (comma-separated)" style="width: 100%; margin-bottom: 10px; padding: 8px; border: 1px solid var(--SmartThemeBorderColor, #444); background: var(--SmartThemeBlurTintColor, #333); color: var(--SmartThemeQuoteColor, #fff); border-radius: 4px;">
             <button id="addEmoji" style="background: var(--SmartThemeEmColor, #007bff); color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">Add Emoji</button>
         </div>
         
         <div>
             <h4 style="color: var(--SmartThemeQuoteColor, #fff);">Current Custom Emojis</h4>
+            <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+                <button id="exportEmojis" style="background: var(--SmartThemeEmColor, #28a745); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Export All</button>
+                <button id="importEmojis" style="background: var(--SmartThemeEmColor, #ffc107); color: black; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Import</button>
+                <input type="file" id="importFile" accept=".json" style="display: none;">
+                <button id="clearAllEmojis" style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Clear All</button>
+            </div>
             <div id="customEmojiList"></div>
         </div>
     `;
@@ -278,27 +449,151 @@ function createCustomEmojiManager() {
         manager.style.display = 'none';
     });
 
-    manager.querySelector('#addEmoji').addEventListener('click', () => {
+    // Handle radio button changes for image source
+    manager.querySelectorAll('input[name="imageSource"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const uploadSection = manager.querySelector('#uploadSection');
+            const urlSection = manager.querySelector('#urlSection');
+            
+            if (e.target.value === 'upload') {
+                uploadSection.style.display = 'block';
+                urlSection.style.display = 'none';
+            } else {
+                uploadSection.style.display = 'none';
+                urlSection.style.display = 'block';
+            }
+        });
+    });
+
+    // Handle file selection and preview
+    manager.querySelector('#emojiFile').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        const previewDiv = manager.querySelector('#imagePreview');
+        
+        if (!file) {
+            previewDiv.innerHTML = '';
+            return;
+        }
+
+        if (!validateImageFile(file)) {
+            e.target.value = '';
+            previewDiv.innerHTML = '';
+            return;
+        }
+
+        try {
+            const dataURL = await fileToDataURL(file);
+            previewDiv.innerHTML = `
+                <img src="${dataURL}" alt="Preview" style="max-width: 100px; max-height: 100px; object-fit: contain; border: 1px solid var(--SmartThemeBorderColor, #444); border-radius: 4px;">
+                <p style="color: var(--SmartThemeQuoteColor, #fff); font-size: 12px; margin: 5px 0 0 0;">Preview (${(file.size / 1024).toFixed(1)}KB)</p>
+            `;
+        } catch (error) {
+            console.error('Error reading file:', error);
+            alert('Error reading the selected file');
+            e.target.value = '';
+            previewDiv.innerHTML = '';
+        }
+    });
+
+    manager.querySelector('#addEmoji').addEventListener('click', async () => {
         const id = manager.querySelector('#emojiId').value.trim();
         const name = manager.querySelector('#emojiName').value.trim();
-        const url = manager.querySelector('#emojiUrl').value.trim();
         const keywords = manager.querySelector('#emojiKeywords').value.trim().split(',').map(k => k.trim()).filter(k => k);
+        const imageSource = manager.querySelector('input[name="imageSource"]:checked').value;
+        
+        let url = '';
 
-        if (!id || !name || !url) {
-            alert('Please fill in all required fields');
+        if (!id || !name) {
+            alert('Please fill in emoji ID and name');
             return;
+        }
+
+        // Validate emoji ID format
+        if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+            alert('Emoji ID can only contain letters, numbers, underscores, and hyphens');
+            return;
+        }
+
+        if (imageSource === 'upload') {
+            const fileInput = manager.querySelector('#emojiFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a file to upload');
+                return;
+            }
+
+            if (!validateImageFile(file)) {
+                return;
+            }
+
+            try {
+                url = await fileToDataURL(file);
+            } catch (error) {
+                console.error('Error processing file:', error);
+                alert('Error processing the selected file');
+                return;
+            }
+        } else {
+            url = manager.querySelector('#emojiUrl').value.trim();
+            if (!url) {
+                alert('Please enter an image URL');
+                return;
+            }
+            if (!(await validateImageUrl(url))) {
+                return;
+            }
         }
 
         if (addCustomEmoji(id, name, url, keywords)) {
             // Clear form
             manager.querySelector('#emojiId').value = '';
             manager.querySelector('#emojiName').value = '';
-            manager.querySelector('#emojiUrl').value = '';
             manager.querySelector('#emojiKeywords').value = '';
+            manager.querySelector('#emojiFile').value = '';
+            manager.querySelector('#emojiUrl').value = '';
+            manager.querySelector('#imagePreview').innerHTML = '';
+            manager.querySelector('input[name="imageSource"][value="upload"]').checked = true;
+            manager.querySelector('#uploadSection').style.display = 'block';
+            manager.querySelector('#urlSection').style.display = 'none';
             
             // Refresh the picker
             refreshEmojiPicker();
             updateCustomEmojiList();
+            
+            alert(`Emoji "${name}" added successfully!`);
+        } else {
+            alert('Failed to add emoji');
+        }
+    });
+
+    // Export functionality
+    manager.querySelector('#exportEmojis').addEventListener('click', () => {
+        exportCustomEmojis();
+    });
+
+    // Import functionality
+    manager.querySelector('#importEmojis').addEventListener('click', () => {
+        manager.querySelector('#importFile').click();
+    });
+
+    manager.querySelector('#importFile').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (file && file.type === 'application/json') {
+            await importCustomEmojis(file);
+        } else if (file) {
+            alert('Please select a valid JSON file');
+        }
+        e.target.value = ''; // Reset file input
+    });
+
+    // Clear all functionality
+    manager.querySelector('#clearAllEmojis').addEventListener('click', () => {
+        if (confirm('Are you sure you want to delete ALL custom emojis? This cannot be undone.')) {
+            saveCustomEmojis([]);
+            refreshEmojiPicker();
+            updateCustomEmojiList();
+            alert('All custom emojis have been deleted');
         }
     });
 
@@ -343,9 +638,13 @@ function updateCustomEmojiList() {
         button.addEventListener('click', (e) => {
             const id = e.target.dataset.id;
             if (confirm(`Are you sure you want to remove the emoji "${id}"?`)) {
-                removeCustomEmoji(id);
-                refreshEmojiPicker();
-                updateCustomEmojiList();
+                if (removeCustomEmoji(id)) {
+                    refreshEmojiPicker();
+                    updateCustomEmojiList();
+                    alert(`Emoji "${id}" removed successfully!`);
+                } else {
+                    alert('Failed to remove emoji');
+                }
             }
         });
     });
@@ -355,8 +654,10 @@ function updateCustomEmojiList() {
  * Refresh the emoji picker with updated data
  */
 function refreshEmojiPicker() {
-    // Remove old picker
-    picker.remove();
+    // Remove old picker from DOM
+    if (picker && picker.parentNode) {
+        picker.parentNode.removeChild(picker);
+    }
     
     // Create new picker with updated data
     const newPickerOptions = {
@@ -395,22 +696,23 @@ addEmojiButton.title = 'Insert emoji';
 addEmojiButton.classList.add('fa-solid', 'fa-icons', 'interactable');
 addEmojiButton.tabIndex = 0;
 
-    const manageButton = document.createElement('div');
-    manageButton.id = 'manageCustomEmojis';
-    manageButton.title = 'Manage custom emojis';
-    manageButton.classList.add('fa-solid', 'fa-cog', 'interactable');
-    manageButton.tabIndex = 0;
-    manageButton.style.marginRight = '5px';
-    
-    const manager = createCustomEmojiManager();
-    
-    manageButton.addEventListener('click', (e) => {
-        e.stopPropagation();
-        manager.style.display = 'block';
-        updateCustomEmojiList();
-    });
-    
-    buttonContainer.insertAdjacentElement('afterbegin', manageButton);
+// Add custom emoji manager button
+const manageButton = document.createElement('div');
+manageButton.id = 'manageCustomEmojis';
+manageButton.title = 'Manage custom emojis';
+manageButton.classList.add('fa-solid', 'fa-cog', 'interactable');
+manageButton.tabIndex = 0;
+manageButton.style.marginRight = '5px';
+
+const manager = createCustomEmojiManager();
+
+manageButton.addEventListener('click', (e) => {
+    e.stopPropagation();
+    manager.style.display = 'block';
+    updateCustomEmojiList();
+});
+
+buttonContainer.insertAdjacentElement('afterbegin', manageButton);
 
 const popper = createPopper(addEmojiButton, picker, {
     placement: 'top-end',
@@ -458,5 +760,5 @@ document.body.addEventListener('keyup', (event) => {
 window.EmojiPickerExtension = {
     addCustomEmoji,
     removeCustomEmoji,
-    loadCustomEmojis,
+    loadCustomEmojis
 };
