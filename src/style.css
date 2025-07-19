@@ -1,3 +1,199 @@
+/* Emoji picker */
 em-emoji-picker {
-    z-index: 1000;
+    z-index: 2000; /* Higher z-index to ensure it appears above other UI elements */
+    max-width: 350px;
+    width: 100%;
+}
+
+/* Custom emoji manager */
+#customEmojiManager {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--SmartThemeBodyColor, #222);
+    border: 1px solid var(--SmartThemeBorderColor, #444);
+    border-radius: 8px;
+    padding: 20px;
+    z-index: 2100; /* Higher than picker to ensure visibility */
+    max-width: 500px;
+    width: 90%;
+    max-height: 70vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Manager header */
+#customEmojiManager h3 {
+    margin: 0;
+    color: var(--SmartThemeQuoteColor, #fff);
+    font-size: 1.5em;
+}
+
+/* Close button */
+#customEmojiManager #closeManager {
+    background: none;
+    border: none;
+    color: var(--SmartThemeQuoteColor, #fff);
+    font-size: 1.5em;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+#customEmojiManager #closeManager:hover {
+    color: var(--SmartThemeEmColor, #007bff);
+}
+
+/* Form elements */
+#customEmojiManager input[type="text"],
+#customEmojiManager input[type="url"],
+#customEmojiManager input[type="file"] {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 8px;
+    border: 1px solid var(--SmartThemeBorderColor, #444);
+    background: var(--SmartThemeBlurTintColor, #333);
+    color: var(--SmartThemeQuoteColor, #fff);
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+#customEmojiManager input:focus {
+    outline: none;
+    border-color: var(--SmartThemeEmColor, #007bff);
+    box-shadow: 0 0 5px var(--SmartThemeEmColor, #007bff);
+}
+
+/* Radio buttons */
+#customEmojiManager input[type="radio"] {
+    margin-right: 5px;
+}
+
+#customEmojiManager label {
+    color: var(--SmartThemeQuoteColor, #fff);
+    cursor: pointer;
+}
+
+/* Buttons */
+#customEmojiManager button {
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#customEmojiManager #addEmoji {
+    background: var(--SmartThemeEmColor, #007bff);
+    color: white;
+}
+
+#customEmojiManager #addEmoji:hover {
+    background: #0056b3; /* Darker shade for hover */
+}
+
+#customEmojiManager #exportEmojis {
+    background: var(--SmartThemeEmColor, #28a745);
+    color: white;
+}
+
+#customEmojiManager #exportEmojis:hover {
+    background: #218838; /* Darker shade for hover */
+}
+
+#customEmojiManager #importEmojis {
+    background: var(--SmartThemeEmColor, #ffc107);
+    color: black;
+}
+
+#customEmojiManager #importEmojis:hover {
+    background: #e0a800; /* Darker shade for hover */
+}
+
+#customEmojiManager #clearAllEmojis {
+    background: #dc3545;
+    color: white;
+}
+
+#customEmojiManager #clearAllEmojis:hover {
+    background: #c82333; /* Darker shade for hover */
+}
+
+#customEmojiManager .removeEmoji {
+    background: #dc3545;
+    color: white;
+    padding: 5px 10px;
+}
+
+#customEmojiManager .removeEmoji:hover {
+    background: #c82333; /* Darker shade for hover */
+}
+
+/* Emoji list items */
+#customEmojiManager #customEmojiList > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    margin-bottom: 5px;
+    background: var(--SmartThemeBlurTintColor, #333);
+    border-radius: 4px;
+}
+
+#customEmojiManager #customEmojiList img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+}
+
+#customEmojiManager #customEmojiList span {
+    color: var(--SmartThemeQuoteColor, #fff);
+}
+
+/* Image preview */
+#customEmojiManager #imagePreview img {
+    max-width: 100px;
+    max-height: 100px;
+    object-fit: contain;
+    border: 1px solid var(--SmartThemeBorderColor, #444);
+    border-radius: 4px;
+}
+
+#customEmojiManager #imagePreview p {
+    color: var(--SmartThemeQuoteColor, #fff);
+    font-size: 12px;
+    margin: 5px 0 0 0;
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+    #customEmojiManager {
+        width: 95%;
+        padding: 15px;
+    }
+
+    em-emoji-picker {
+        max-width: 300px;
+    }
+}
+
+/* Accessibility */
+#customEmojiManager button:focus,
+#customEmojiManager input:focus,
+#customEmojiManager .interactable:focus {
+    outline: 2px solid var(--SmartThemeEmColor, #007bff);
+    outline-offset: 2px;
+}
+
+/* Emoji button */
+#addEmojiButton,
+#manageCustomEmojis {
+    cursor: pointer;
+    color: var(--SmartThemeQuoteColor, #fff);
+    margin-right: 5px;
+}
+
+#addEmojiButton:hover,
+#manageCustomEmojis:hover {
+    color: var(--SmartThemeEmColor, #007bff);
 }
