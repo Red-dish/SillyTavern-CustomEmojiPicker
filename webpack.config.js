@@ -6,12 +6,12 @@ module.exports = {
     output: {
         path: path.join(__dirname, 'dist/'),
         filename: `index.js`,
-        publicPath: '/scripts/extensions/third-party/Extension-EmojiPicker/dist/',
+        publicPath: '/scripts/extensions/third-party/SillyTavern-CustomEmojiPicker/dist/',
     },
     module: {
         rules: [
             {
-                test: /\.js/,
+                test: /\.js$/,
                 exclude: /node_modules/,
                 options: {
                     cacheDirectory: true,
@@ -23,9 +23,10 @@ module.exports = {
                 loader: 'babel-loader',
             },
             {
-                test: /\.css/,
+                test: /\.css$/,
                 use: ['style-loader', 'css-loader'],
             },
+            
         ],
     },
     optimization: {
